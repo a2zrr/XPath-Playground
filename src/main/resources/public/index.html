@@ -27,7 +27,7 @@
       padding: 24px 16px;
     }
     .container {
-      max-width: 820px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -222,6 +222,116 @@
       font-family: Consolas, Monaco, "Courier New", monospace;
       font-size: 0.9rem;
     }
+    .tree-grid-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .tree-grid-wrapper.has-tree {
+      grid-template-columns: 1.15fr 0.85fr;
+    }
+    @media (max-width: 850px) {
+      .tree-grid-wrapper.has-tree {
+        grid-template-columns: 1fr;
+      }
+    }
+    .tree-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .tree-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-xs {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-xs:hover {
+      background: #e2e8f0;
+    }
+    .tree-container {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      max-height: 550px;
+      overflow: auto;
+      padding: 6px 4px;
+      background: #ffffff;
+    }
+    .tree-details {
+      border-left: 1px dashed #cbd5e1;
+      margin-left: 12px;
+      padding-left: 6px;
+    }
+    .tree-container > .tree-details {
+      border-left: none;
+      margin-left: 0;
+      padding-left: 0;
+    }
+    .tree-summary {
+      cursor: pointer;
+      outline: none;
+      border-radius: 3px;
+      padding: 1px 4px;
+      display: list-item;
+    }
+    .tree-summary:hover, .tree-node-line:hover {
+      background: #f8fafc;
+    }
+    .tree-node-line {
+      margin-left: 12px;
+      padding: 1px 4px;
+      border-left: 1px dashed #cbd5e1;
+      border-radius: 3px;
+    }
+    .tree-container > .tree-node-line {
+      margin-left: 0;
+      border-left: none;
+    }
+    .tree-highlight {
+      background-color: #fef08a !important;
+      color: #713f12 !important;
+      border-radius: 3px;
+      box-shadow: 0 0 0 2px #facc15;
+    }
+    .tree-attr-chip {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      padding: 0 4px;
+      font-size: 0.75rem;
+      margin-left: 6px;
+      color: #475569;
+      cursor: pointer;
+    }
+    .tree-tag-name {
+      color: #0369a1;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tree-text-content {
+      color: #0f172a;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+    .tree-comment {
+      color: #94a3b8;
+      font-style: italic;
+      margin-left: 12px;
+      padding: 1px 4px;
+      border-left: 1px dashed #cbd5e1;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -290,25 +400,46 @@
       </div>
     </div>
 
-    <!-- XPath Section -->
-    <div class="card">
-      <h2>XPath Expression</h2>
-      <div class="xpath-form">
-        <input type="text" id="xpathInput" placeholder="//d:book/d:title" disabled>
-        <button id="runBtn" disabled>Run</button>
+    <!-- Tree View & XPath Grid -->
+    <div id="tree-grid-wrapper" class="tree-grid-wrapper">
+      <!-- Tree Panel -->
+      <div class="card" id="tree-card" style="display: none;">
+        <div class="tree-header">
+          <h2 style="margin-bottom: 0;">XML Tree</h2>
+          <div class="tree-actions">
+            <button type="button" id="expandAllBtn" class="btn-xs">Expand all</button>
+            <button type="button" id="collapseAllBtn" class="btn-xs">Collapse all</button>
+          </div>
+        </div>
+        <div id="tree-container" class="tree-container"></div>
       </div>
-    </div>
 
-    <!-- Results Section -->
-    <div class="card" id="results-card" style="display: none;">
-      <h2>Results</h2>
-      <div id="results-content"></div>
+      <!-- XPath Section & Results Column -->
+      <div class="xpath-column">
+        <!-- XPath Section -->
+        <div class="card">
+          <h2>XPath Expression</h2>
+          <div class="xpath-form">
+            <input type="text" id="xpathInput" placeholder="//d:book/d:title" disabled>
+            <button id="runBtn" disabled>Run</button>
+          </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card" id="results-card" style="display: none; margin-top: 20px;">
+          <h2>Results</h2>
+          <div id="results-content"></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     let xsdContent = null;
     let xmlContent = null;
+    let parsedXmlDoc = null;
+    let currentNamespaces = {};
+    const domNodeToTreeElem = new Map();
 
     const xsdFile = document.getElementById('xsdFile');
     const xmlFile = document.getElementById('xmlFile');
@@ -317,6 +448,8 @@
     const nsTbody = document.getElementById('ns-tbody');
     const resultsCard = document.getElementById('results-card');
     const resultsContent = document.getElementById('results-content');
+    const treeCard = document.getElementById('tree-card');
+    const treeGridWrapper = document.getElementById('tree-grid-wrapper');
 
     function escapeHtml(str) {
       if (str == null) return '';
@@ -326,6 +459,232 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function getNamespacePrefix(uri) {
+      if (!uri || !currentNamespaces) return null;
+      for (const [prefix, nsUri] of Object.entries(currentNamespaces)) {
+        if (nsUri === uri) return prefix;
+      }
+      return null;
+    }
+
+    function getPositionalXPath(node) {
+      if (!node || node.nodeType === Node.DOCUMENT_NODE) return "/";
+      if (node.nodeType === Node.ATTRIBUTE_NODE) {
+        const owner = node.ownerElement;
+        const parentPath = owner ? getPositionalXPath(owner) : "";
+        let attrName = node.localName || node.name;
+        if (attrName.includes(':')) attrName = attrName.split(':')[1];
+        return (parentPath === "/" ? "" : parentPath) + "/@" + attrName;
+      }
+      let segment = "";
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        let index = 1;
+        let prev = node.previousElementSibling;
+        while (prev) {
+          index++;
+          prev = prev.previousElementSibling;
+        }
+        segment = `/*[${index}]`;
+      } else if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
+        let index = 1;
+        let prev = node.previousSibling;
+        while (prev) {
+          if (prev.nodeType === Node.TEXT_NODE || prev.nodeType === Node.CDATA_SECTION_NODE) index++;
+          prev = prev.previousSibling;
+        }
+        segment = `/text()[${index}]`;
+      } else if (node.nodeType === Node.COMMENT_NODE) {
+        let index = 1;
+        let prev = node.previousSibling;
+        while (prev) {
+          if (prev.nodeType === Node.COMMENT_NODE) index++;
+          prev = prev.previousSibling;
+        }
+        segment = `/comment()[${index}]`;
+      }
+      const parent = node.parentNode;
+      if (!parent || parent.nodeType === Node.DOCUMENT_NODE) return segment;
+      const parentPath = getPositionalXPath(parent);
+      return (parentPath === "/" ? "" : parentPath) + segment;
+    }
+
+    function handleNodeClick(e, node) {
+      e.stopPropagation();
+      const path = getPositionalXPath(node);
+      if (path && xpathInput) {
+        xpathInput.value = path;
+      }
+    }
+
+    function renderXmlTree() {
+      const container = document.getElementById('tree-container');
+      container.innerHTML = '';
+      domNodeToTreeElem.clear();
+
+      if (!xmlContent) return;
+
+      try {
+        const parser = new DOMParser();
+        parsedXmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+        const parserError = parsedXmlDoc.querySelector('parsererror');
+        if (parserError) {
+          container.innerHTML = '<div style="color: var(--error); padding: 8px;">XML parse error in browser</div>';
+          return;
+        }
+
+        if (parsedXmlDoc.documentElement) {
+          const rootNode = renderElementNode(parsedXmlDoc.documentElement);
+          container.appendChild(rootNode);
+        }
+      } catch (err) {
+        container.innerHTML = `<div style="color: var(--error); padding: 8px;">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderElementNode(element) {
+      const meaningfulChildren = [];
+      for (let i = 0; i < element.childNodes.length; i++) {
+        const child = element.childNodes[i];
+        if (child.nodeType === Node.TEXT_NODE || child.nodeType === Node.CDATA_SECTION_NODE) {
+          if (child.textContent.trim().length > 0) {
+            meaningfulChildren.push(child);
+          }
+        } else if (child.nodeType === Node.ELEMENT_NODE || child.nodeType === Node.COMMENT_NODE) {
+          meaningfulChildren.push(child);
+        }
+      }
+
+      const tagName = element.tagName || element.nodeName;
+      const nsPrefix = getNamespacePrefix(element.namespaceURI);
+      const localName = element.localName || tagName.replace(/^.*:/, '');
+
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'tree-tag-name';
+      tagSpan.textContent = tagName;
+      if (nsPrefix) {
+        tagSpan.title = `XPath: ${nsPrefix}:${localName}`;
+      }
+      tagSpan.addEventListener('click', (e) => handleNodeClick(e, element));
+
+      const attrContainer = document.createElement('span');
+      attrContainer.className = 'tree-attrs';
+      if (element.attributes) {
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i];
+          const chip = document.createElement('span');
+          chip.className = 'tree-attr-chip';
+          chip.textContent = `@${attr.name}="${attr.value}"`;
+          chip.addEventListener('click', (e) => handleNodeClick(e, attr));
+          domNodeToTreeElem.set(attr, chip);
+          attrContainer.appendChild(chip);
+        }
+      }
+
+      const isLeafWithText = meaningfulChildren.length === 1 &&
+        (meaningfulChildren[0].nodeType === Node.TEXT_NODE || meaningfulChildren[0].nodeType === Node.CDATA_SECTION_NODE);
+      const isLeafEmpty = meaningfulChildren.length === 0;
+
+      if (isLeafWithText || isLeafEmpty) {
+        const line = document.createElement('div');
+        line.className = 'tree-node-line';
+        line.appendChild(tagSpan);
+        line.appendChild(attrContainer);
+
+        if (isLeafWithText) {
+          const textNode = meaningfulChildren[0];
+          const textSpan = document.createElement('span');
+          textSpan.className = 'tree-text-content';
+          textSpan.textContent = textNode.textContent.trim();
+          textSpan.addEventListener('click', (e) => handleNodeClick(e, textNode));
+          domNodeToTreeElem.set(textNode, textSpan);
+          line.appendChild(textSpan);
+        }
+
+        domNodeToTreeElem.set(element, line);
+        return line;
+      } else {
+        const details = document.createElement('details');
+        details.className = 'tree-details';
+        details.open = true;
+
+        const summary = document.createElement('summary');
+        summary.className = 'tree-summary';
+        summary.appendChild(tagSpan);
+        summary.appendChild(attrContainer);
+
+        domNodeToTreeElem.set(element, summary);
+        details.appendChild(summary);
+
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'tree-children';
+
+        meaningfulChildren.forEach(child => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            childrenContainer.appendChild(renderElementNode(child));
+          } else if (child.nodeType === Node.COMMENT_NODE) {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'tree-comment';
+            commentDiv.textContent = `<!--${child.textContent}-->`;
+            commentDiv.addEventListener('click', (e) => handleNodeClick(e, child));
+            domNodeToTreeElem.set(child, commentDiv);
+            childrenContainer.appendChild(commentDiv);
+          } else if (child.nodeType === Node.TEXT_NODE || child.nodeType === Node.CDATA_SECTION_NODE) {
+            const textDiv = document.createElement('div');
+            textDiv.className = 'tree-node-line tree-text-content';
+            textDiv.textContent = child.textContent.trim();
+            textDiv.addEventListener('click', (e) => handleNodeClick(e, child));
+            domNodeToTreeElem.set(child, textDiv);
+            childrenContainer.appendChild(textDiv);
+          }
+        });
+
+        details.appendChild(childrenContainer);
+        return details;
+      }
+    }
+
+    function highlightQueryResults(items) {
+      document.querySelectorAll('.tree-highlight').forEach(el => el.classList.remove('tree-highlight'));
+
+      if (!items || !parsedXmlDoc) return;
+
+      let firstMatch = null;
+      items.forEach(item => {
+        if (!item.path) return;
+        try {
+          const evalResult = parsedXmlDoc.evaluate(
+            item.path,
+            parsedXmlDoc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          );
+          const matchedNode = evalResult.singleNodeValue;
+          if (matchedNode) {
+            const treeElem = domNodeToTreeElem.get(matchedNode);
+            if (treeElem) {
+              treeElem.classList.add('tree-highlight');
+              if (!firstMatch) firstMatch = treeElem;
+
+              let parent = treeElem.parentElement;
+              while (parent && parent !== document.getElementById('tree-container')) {
+                if (parent.tagName === 'DETAILS') {
+                  parent.open = true;
+                }
+                parent = parent.parentElement;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not evaluate path for highlight:', item.path, e);
+        }
+      });
+
+      if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
 
     function setStatus(id, step) {
@@ -360,6 +719,9 @@
         setStatus('xml-matches-xsd', null);
         xpathInput.disabled = true;
         runBtn.disabled = true;
+        treeCard.style.display = 'none';
+        treeGridWrapper.classList.remove('has-tree');
+        parsedXmlDoc = null;
         return;
       }
 
@@ -377,6 +739,7 @@
 
         // Namespaces
         nsTbody.innerHTML = '';
+        currentNamespaces = data.namespaces || {};
         if (data.namespaces && Object.keys(data.namespaces).length > 0) {
           for (const [prefix, uri] of Object.entries(data.namespaces)) {
             const tr = document.createElement('tr');
@@ -390,6 +753,16 @@
         const valid = !!data.allValid;
         xpathInput.disabled = !valid;
         runBtn.disabled = !valid;
+
+        if (valid) {
+          treeCard.style.display = 'block';
+          treeGridWrapper.classList.add('has-tree');
+          renderXmlTree();
+        } else {
+          treeCard.style.display = 'none';
+          treeGridWrapper.classList.remove('has-tree');
+          parsedXmlDoc = null;
+        }
       } catch (err) {
         console.error('Validation request failed', err);
       }
@@ -482,8 +855,15 @@
         const data = await res.json();
 
         if (data.error) {
+          highlightQueryResults([]);
           resultsContent.innerHTML = `<div class="error-msg">${escapeHtml(data.error)}</div>`;
           return;
+        }
+
+        if (data.type === 'NODESET' || data.type === 'NODE') {
+          highlightQueryResults(data.items);
+        } else {
+          highlightQueryResults([]);
         }
 
         const countText = data.count + (data.count === 1 ? ' item' : ' items') + (data.truncated ? ' (capped at 500)' : '');
@@ -523,6 +903,13 @@
       if (e.key === 'Enter' && !runBtn.disabled) {
         runXPath();
       }
+    });
+
+    document.getElementById('expandAllBtn').addEventListener('click', () => {
+      document.querySelectorAll('#tree-container details').forEach(d => d.open = true);
+    });
+    document.getElementById('collapseAllBtn').addEventListener('click', () => {
+      document.querySelectorAll('#tree-container details').forEach(d => d.open = false);
     });
   </script>
 </body>

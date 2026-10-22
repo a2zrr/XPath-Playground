@@ -158,6 +158,7 @@ public class XPathService {
         map.put("kind", kind);
         map.put("name", node.getNodeName());
         map.put("value", node.getTextContent());
+        map.put("path", getNodePath(node));
 
         if (node.getNodeType() == Node.ELEMENT_NODE) {
             map.put("xml", serializeElement((Element) node));
@@ -165,6 +166,69 @@ public class XPathService {
             map.put("xml", null);
         }
         return map;
+    }
+
+    private static String getNodePath(Node node) {
+        if (node == null) return "";
+        if (node.getNodeType() == Node.DOCUMENT_NODE) return "/";
+
+        if (node.getNodeType() == Node.ATTRIBUTE_NODE) {
+            org.w3c.dom.Attr attr = (org.w3c.dom.Attr) node;
+            Element owner = attr.getOwnerElement();
+            String attrName = attr.getLocalName() != null ? attr.getLocalName() : attr.getName();
+            if (attrName.contains(":")) {
+                attrName = attrName.substring(attrName.indexOf(':') + 1);
+            }
+            String parentPath = owner != null ? getNodePath(owner) : "";
+            return (parentPath.equals("/") ? "" : parentPath) + "/@" + attrName;
+        }
+
+        String segment = "";
+        switch (node.getNodeType()) {
+            case Node.ELEMENT_NODE -> {
+                int index = 1;
+                Node prev = node.getPreviousSibling();
+                while (prev != null) {
+                    if (prev.getNodeType() == Node.ELEMENT_NODE) {
+                        index++;
+                    }
+                    prev = prev.getPreviousSibling();
+                }
+                segment = "/*[" + index + "]";
+            }
+            case Node.TEXT_NODE, Node.CDATA_SECTION_NODE -> {
+                int index = 1;
+                Node prev = node.getPreviousSibling();
+                while (prev != null) {
+                    if (prev.getNodeType() == Node.TEXT_NODE || prev.getNodeType() == Node.CDATA_SECTION_NODE) {
+                        index++;
+                    }
+                    prev = prev.getPreviousSibling();
+                }
+                segment = "/text()[" + index + "]";
+            }
+            case Node.COMMENT_NODE -> {
+                int index = 1;
+                Node prev = node.getPreviousSibling();
+                while (prev != null) {
+                    if (prev.getNodeType() == Node.COMMENT_NODE) {
+                        index++;
+                    }
+                    prev = prev.getPreviousSibling();
+                }
+                segment = "/comment()[" + index + "]";
+            }
+            default -> {
+                return "";
+            }
+        }
+
+        Node parent = node.getParentNode();
+        if (parent == null || parent.getNodeType() == Node.DOCUMENT_NODE) {
+            return segment;
+        }
+        String parentPath = getNodePath(parent);
+        return (parentPath.equals("/") ? "" : parentPath) + segment;
     }
 
     private static String serializeElement(Element element) {
