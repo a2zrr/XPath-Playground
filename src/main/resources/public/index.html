@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XPath Playground</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --error: #dc2626;
+      --neutral: #94a3b8;
+      --code-bg: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    h2 { font-size: 1.1rem; margin-bottom: 12px; font-weight: 600; }
+    .file-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .file-grid { grid-template-columns: 1fr; }
+    }
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+    input[type="file"] {
+      width: 100%;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      padding: 8px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .status-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    .icon {
+      font-weight: 700;
+      width: 20px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    .icon-ok { color: var(--success); }
+    .icon-error { color: var(--error); }
+    .icon-skipped { color: var(--neutral); }
+    .errors {
+      list-style: none;
+      margin-left: 28px;
+      color: var(--error);
+      font-size: 0.85rem;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .note {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--text-muted); font-weight: 600; }
+    td code {
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .xpath-form {
+      display: flex;
+      gap: 8px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    button {
+      padding: 9px 18px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    button:disabled, input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .results-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #e0e7ff;
+      color: #3730a3;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .count {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .error-msg {
+      color: var(--error);
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .item-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+    pre.code-block {
+      background: var(--code-bg);
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      margin: 0;
+    }
+    .scalar-text {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.95rem;
+    }
+    .attr-text {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>XPath Playground</h1>
+
+    <!-- File Inputs -->
+    <div class="card">
+      <h2>Files</h2>
+      <div class="file-grid">
+        <div class="form-group">
+          <label for="xsdFile">XSD Schema</label>
+          <input type="file" id="xsdFile" accept=".xsd,.xml">
+        </div>
+        <div class="form-group">
+          <label for="xmlFile">XML Document</label>
+          <input type="file" id="xmlFile" accept=".xml">
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Panel -->
+    <div class="card">
+      <h2>Validation Status</h2>
+      <div class="status-list">
+        <div class="status-row" id="row-xml-wellformed">
+          <div class="status-header">
+            <span class="icon icon-skipped" id="icon-xml-wellformed">–</span>
+            <span>XML well-formed</span>
+          </div>
+          <ul class="errors" id="errors-xml-wellformed"></ul>
+        </div>
+        <div class="status-row" id="row-xsd-valid">
+          <div class="status-header">
+            <span class="icon icon-skipped" id="icon-xsd-valid">–</span>
+            <span>XSD valid</span>
+          </div>
+          <ul class="errors" id="errors-xsd-valid"></ul>
+        </div>
+        <div class="status-row" id="row-xml-matches-xsd">
+          <div class="status-header">
+            <span class="icon icon-skipped" id="icon-xml-matches-xsd">–</span>
+            <span>XML valid against XSD</span>
+          </div>
+          <ul class="errors" id="errors-xml-matches-xsd"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Namespaces Panel -->
+    <div class="card" id="ns-card">
+      <h2>Namespaces</h2>
+      <p class="note">use these prefixes in XPath</p>
+      <div id="ns-content">
+        <table id="ns-table">
+          <thead>
+            <tr><th>Prefix</th><th>URI</th></tr>
+          </thead>
+          <tbody id="ns-tbody">
+            <tr><td colspan="2" style="color: var(--text-muted)">No namespaces</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- XPath Section -->
+    <div class="card">
+      <h2>XPath Expression</h2>
+      <div class="xpath-form">
+        <input type="text" id="xpathInput" placeholder="//d:book/d:title" disabled>
+        <button id="runBtn" disabled>Run</button>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="card" id="results-card" style="display: none;">
+      <h2>Results</h2>
+      <div id="results-content"></div>
+    </div>
+  </div>
+
+  <script>
+    let xsdContent = null;
+    let xmlContent = null;
+
+    const xsdFile = document.getElementById('xsdFile');
+    const xmlFile = document.getElementById('xmlFile');
+    const xpathInput = document.getElementById('xpathInput');
+    const runBtn = document.getElementById('runBtn');
+    const nsTbody = document.getElementById('ns-tbody');
+    const resultsCard = document.getElementById('results-card');
+    const resultsContent = document.getElementById('results-content');
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(id, step) {
+      const icon = document.getElementById('icon-' + id);
+      const errorsList = document.getElementById('errors-' + id);
+      errorsList.innerHTML = '';
+
+      if (!step || step.status === 'skipped') {
+        icon.textContent = '–';
+        icon.className = 'icon icon-skipped';
+      } else if (step.status === 'ok') {
+        icon.textContent = '✓';
+        icon.className = 'icon icon-ok';
+      } else {
+        icon.textContent = '✗';
+        icon.className = 'icon icon-error';
+        if (step.errors && step.errors.length > 0) {
+          step.errors.forEach(err => {
+            const li = document.createElement('li');
+            const loc = (err.line != null && err.line > 0) ? `${err.line}:${err.column} ` : '';
+            li.textContent = `${loc}${err.message}`;
+            errorsList.appendChild(li);
+          });
+        }
+      }
+    }
+
+    async function validateFiles() {
+      if (!xsdContent || !xmlContent) {
+        setStatus('xml-wellformed', null);
+        setStatus('xsd-valid', null);
+        setStatus('xml-matches-xsd', null);
+        xpathInput.disabled = true;
+        runBtn.disabled = true;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xml: xmlContent, xsd: xsdContent })
+        });
+        const data = await res.json();
+
+        setStatus('xml-wellformed', data.xmlWellFormed);
+        setStatus('xsd-valid', data.xsdValid);
+        setStatus('xml-matches-xsd', data.xmlMatchesXsd);
+
+        // Namespaces
+        nsTbody.innerHTML = '';
+        if (data.namespaces && Object.keys(data.namespaces).length > 0) {
+          for (const [prefix, uri] of Object.entries(data.namespaces)) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><code>${escapeHtml(prefix)}</code></td><td>${escapeHtml(uri)}</td>`;
+            nsTbody.appendChild(tr);
+          }
+        } else {
+          nsTbody.innerHTML = '<tr><td colspan="2" style="color: var(--text-muted)">No namespaces</td></tr>';
+        }
+
+        const valid = !!data.allValid;
+        xpathInput.disabled = !valid;
+        runBtn.disabled = !valid;
+      } catch (err) {
+        console.error('Validation request failed', err);
+      }
+    }
+
+    xsdFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        xsdContent = await file.text();
+        validateFiles();
+      }
+    });
+
+    xmlFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        xmlContent = await file.text();
+        validateFiles();
+      }
+    });
+
+    async function runXPath() {
+      const expr = xpathInput.value.trim();
+      if (!expr || !xmlContent) return;
+
+      resultsCard.style.display = 'block';
+      resultsContent.innerHTML = '<div style="color: var(--text-muted)">Evaluating...</div>';
+
+      try {
+        const res = await fetch('/api/xpath', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xml: xmlContent, expression: expr })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          resultsContent.innerHTML = `<div class="error-msg">${escapeHtml(data.error)}</div>`;
+          return;
+        }
+
+        const countText = data.count + (data.count === 1 ? ' item' : ' items') + (data.truncated ? ' (capped at 500)' : '');
+        let html = `
+          <div class="results-header">
+            <span class="badge">${escapeHtml(data.type)}</span>
+            <span class="count">${escapeHtml(countText)}</span>
+          </div>
+          <div class="items-list">
+        `;
+
+        if (data.items && data.items.length > 0) {
+          data.items.forEach(item => {
+            if (item.kind === 'element' && item.xml) {
+              html += `<div class="item-card"><pre class="code-block"><code>${escapeHtml(item.xml)}</code></pre></div>`;
+            } else if (item.kind === 'attribute') {
+              html += `<div class="item-card attr-text">${escapeHtml(item.name)}="${escapeHtml(item.value)}"</div>`;
+            } else if (item.kind) {
+              html += `<div class="item-card scalar-text">${escapeHtml(item.value)}</div>`;
+            } else {
+              html += `<div class="item-card scalar-text">${escapeHtml(item.value)}</div>`;
+            }
+          });
+        } else {
+          html += '<div style="color: var(--text-muted)">No matching results</div>';
+        }
+
+        html += '</div>';
+        resultsContent.innerHTML = html;
+      } catch (err) {
+        resultsContent.innerHTML = `<div class="error-msg">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    runBtn.addEventListener('click', runXPath);
+    xpathInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !runBtn.disabled) {
+        runXPath();
+      }
+    });
+  </script>
+</body>
+</html>
