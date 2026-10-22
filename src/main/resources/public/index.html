@@ -149,6 +149,15 @@
     button:hover:not(:disabled) {
       background: var(--primary-hover);
     }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #334155;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #cbd5e1;
+    }
     button:disabled, input:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -221,14 +230,17 @@
 
     <!-- File Inputs -->
     <div class="card">
-      <h2>Files</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h2 style="margin-bottom: 0;">Files</h2>
+        <button type="button" id="loadSampleBtn" class="btn-secondary">Load Sample Files</button>
+      </div>
       <div class="file-grid">
         <div class="form-group">
-          <label for="xsdFile">XSD Schema</label>
+          <label for="xsdFile">XSD Schema <span id="xsdLoadedName" style="color: var(--text-muted); font-size: 0.8rem; font-weight: normal;"></span></label>
           <input type="file" id="xsdFile" accept=".xsd,.xml">
         </div>
         <div class="form-group">
-          <label for="xmlFile">XML Document</label>
+          <label for="xmlFile">XML Document <span id="xmlLoadedName" style="color: var(--text-muted); font-size: 0.8rem; font-weight: normal;"></span></label>
           <input type="file" id="xmlFile" accept=".xml">
         </div>
       </div>
@@ -387,6 +399,7 @@
       const file = e.target.files[0];
       if (file) {
         xsdContent = await file.text();
+        document.getElementById('xsdLoadedName').textContent = '';
         validateFiles();
       }
     });
@@ -395,8 +408,62 @@
       const file = e.target.files[0];
       if (file) {
         xmlContent = await file.text();
+        document.getElementById('xmlLoadedName').textContent = '';
         validateFiles();
       }
+    });
+
+    const SAMPLE_XSD = `<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://example.com/library"
+           xmlns="http://example.com/library"
+           elementFormDefault="qualified">
+  <xs:element name="library">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="book" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="title" type="xs:string"/>
+              <xs:element name="author" type="xs:string"/>
+              <xs:element name="price" type="xs:decimal"/>
+            </xs:sequence>
+            <xs:attribute name="year" type="xs:int" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>`;
+
+    const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<library xmlns="http://example.com/library">
+  <book year="1925">
+    <title>The Great Gatsby</title>
+    <author>F. Scott Fitzgerald</author>
+    <price>12.99</price>
+  </book>
+  <book year="1954">
+    <title>The Lord of the Rings</title>
+    <author>J.R.R. Tolkien</author>
+    <price>29.99</price>
+  </book>
+  <book year="1813">
+    <title>Pride and Prejudice</title>
+    <author>Jane Austen</author>
+    <price>9.99</price>
+  </book>
+</library>`;
+
+    document.getElementById('loadSampleBtn').addEventListener('click', () => {
+      xsdContent = SAMPLE_XSD;
+      xmlContent = SAMPLE_XML;
+      document.getElementById('xsdLoadedName').textContent = '(samples/ok.xsd)';
+      document.getElementById('xmlLoadedName').textContent = '(samples/ok.xml)';
+      if (!xpathInput.value) {
+        xpathInput.value = '//d:book/d:title';
+      }
+      validateFiles();
     });
 
     async function runXPath() {

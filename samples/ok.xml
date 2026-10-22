@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library xmlns="http://example.com/library">
+  <book year="1925">
+    <title>The Great Gatsby</title>
+    <author>F. Scott Fitzgerald</author>
+    <price>12.99</price>
+  </book>
+  <book year="1954">
+    <title>The Lord of the Rings</title>
+    <author>J.R.R. Tolkien</author>
+    <price>29.99</price>
+  </book>
+  <book year="1813">
+    <title>Pride and Prejudice</title>
+    <author>Jane Austen</author>
+    <price>9.99</price>
+  </book>
+</library>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library xmlns="http://example.com/library">
+  <book year="invalid-year">
+    <author>F. Scott Fitzgerald</author>
+    <price>free</price>
+  </book>
+</library>
