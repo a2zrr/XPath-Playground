@@ -312,17 +312,14 @@
       font-size: 0.75rem;
       margin-left: 6px;
       color: #475569;
-      cursor: pointer;
     }
     .tree-tag-name {
       color: #0369a1;
       font-weight: 600;
-      cursor: pointer;
     }
     .tree-text-content {
       color: #0f172a;
       margin-left: 6px;
-      cursor: pointer;
     }
     .tree-comment {
       color: #94a3b8;
@@ -330,7 +327,6 @@
       margin-left: 12px;
       padding: 1px 4px;
       border-left: 1px dashed #cbd5e1;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -469,55 +465,6 @@
       return null;
     }
 
-    function getPositionalXPath(node) {
-      if (!node || node.nodeType === Node.DOCUMENT_NODE) return "/";
-      if (node.nodeType === Node.ATTRIBUTE_NODE) {
-        const owner = node.ownerElement;
-        const parentPath = owner ? getPositionalXPath(owner) : "";
-        let attrName = node.localName || node.name;
-        if (attrName.includes(':')) attrName = attrName.split(':')[1];
-        return (parentPath === "/" ? "" : parentPath) + "/@" + attrName;
-      }
-      let segment = "";
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        let index = 1;
-        let prev = node.previousElementSibling;
-        while (prev) {
-          index++;
-          prev = prev.previousElementSibling;
-        }
-        segment = `/*[${index}]`;
-      } else if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
-        let index = 1;
-        let prev = node.previousSibling;
-        while (prev) {
-          if (prev.nodeType === Node.TEXT_NODE || prev.nodeType === Node.CDATA_SECTION_NODE) index++;
-          prev = prev.previousSibling;
-        }
-        segment = `/text()[${index}]`;
-      } else if (node.nodeType === Node.COMMENT_NODE) {
-        let index = 1;
-        let prev = node.previousSibling;
-        while (prev) {
-          if (prev.nodeType === Node.COMMENT_NODE) index++;
-          prev = prev.previousSibling;
-        }
-        segment = `/comment()[${index}]`;
-      }
-      const parent = node.parentNode;
-      if (!parent || parent.nodeType === Node.DOCUMENT_NODE) return segment;
-      const parentPath = getPositionalXPath(parent);
-      return (parentPath === "/" ? "" : parentPath) + segment;
-    }
-
-    function handleNodeClick(e, node) {
-      e.stopPropagation();
-      const path = getPositionalXPath(node);
-      if (path && xpathInput) {
-        xpathInput.value = path;
-      }
-    }
-
     function renderXmlTree() {
       const container = document.getElementById('tree-container');
       container.innerHTML = '';
@@ -566,7 +513,6 @@
       if (nsPrefix) {
         tagSpan.title = `XPath: ${nsPrefix}:${localName}`;
       }
-      tagSpan.addEventListener('click', (e) => handleNodeClick(e, element));
 
       const attrContainer = document.createElement('span');
       attrContainer.className = 'tree-attrs';
@@ -576,7 +522,6 @@
           const chip = document.createElement('span');
           chip.className = 'tree-attr-chip';
           chip.textContent = `@${attr.name}="${attr.value}"`;
-          chip.addEventListener('click', (e) => handleNodeClick(e, attr));
           domNodeToTreeElem.set(attr, chip);
           attrContainer.appendChild(chip);
         }
@@ -597,7 +542,6 @@
           const textSpan = document.createElement('span');
           textSpan.className = 'tree-text-content';
           textSpan.textContent = textNode.textContent.trim();
-          textSpan.addEventListener('click', (e) => handleNodeClick(e, textNode));
           domNodeToTreeElem.set(textNode, textSpan);
           line.appendChild(textSpan);
         }
@@ -627,14 +571,12 @@
             const commentDiv = document.createElement('div');
             commentDiv.className = 'tree-comment';
             commentDiv.textContent = `<!--${child.textContent}-->`;
-            commentDiv.addEventListener('click', (e) => handleNodeClick(e, child));
             domNodeToTreeElem.set(child, commentDiv);
             childrenContainer.appendChild(commentDiv);
           } else if (child.nodeType === Node.TEXT_NODE || child.nodeType === Node.CDATA_SECTION_NODE) {
             const textDiv = document.createElement('div');
             textDiv.className = 'tree-node-line tree-text-content';
             textDiv.textContent = child.textContent.trim();
-            textDiv.addEventListener('click', (e) => handleNodeClick(e, child));
             domNodeToTreeElem.set(child, textDiv);
             childrenContainer.appendChild(textDiv);
           }
