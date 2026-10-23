@@ -31,7 +31,7 @@ A lightweight, local, single-user web application to learn and experiment with X
 
 1. Clone or download the repository:
    ```bash
-   git clone https://github.com/<your-username>/xpath-playground.git
+   git clone https://github.com/a2zrr/XPath-Playground.git
    cd xpath-playground
    ```
 
